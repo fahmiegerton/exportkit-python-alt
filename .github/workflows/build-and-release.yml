@@ -24,7 +24,7 @@ jobs:
     
     - name: Build executable
       run: |
-        python -m nuitka --follow-imports --windows-disable-console=disable --onefile --include-module=tkinterdnd2 --enable-plugin=tk-inter main.py
+        python -m nuitka --follow-imports --windows-disable-console --onefile --include-module=tkinterdnd2 --enable-plugin=tk-inter main.py
     
     - name: Create Release
       id: create_release
