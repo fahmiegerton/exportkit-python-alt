@@ -110,7 +110,15 @@ class PSDConverterApp:
 
                             font_set = engine_dict.get('ResourceDict', {}).get('FontSet', [])
                             font_index = style_run.get('Font', 0)
-                            font_name = font_set[font_index]['Name'] if font_set and font_index < len(font_set) else "Font not found"
+                            font_name = None
+                            if font_set and isinstance(font_index, int) and 0 <= font_index < len(font_set):
+                                font_name = font_set[font_index].get('Name')
+                            
+                            if not font_name:
+                                font_name = self.extract_font_from_layer(layer)
+                            
+                            if not font_name:
+                                font_name = self.ask_font_name(layer.name)
 
                             justification = engine_dict.get('ParagraphRun', {}).get('RunArray', [{}])[0].get('ParagraphSheet', {}).get('Properties', {}).get('Justification', "left")
                             if isinstance(justification, str):
@@ -123,9 +131,6 @@ class PSDConverterApp:
                             color_hex = f"0x{int(color[1]*255):02X}{int(color[2]*255):02X}{int(color[3]*255):02X}" if color else "0x000000"
                             size = style_run.get('FontSize', 0)
                             text_value = layer.text or ""
-
-                            if font_name == "Font not found":
-                                font_name = self.ask_font_name(layer.name)
 
                             layer_info.update({
                                 "font": font_name,
@@ -171,6 +176,44 @@ class PSDConverterApp:
 
         self.loading_window.destroy()
         messagebox.showinfo("Success", f"JSON file saved to {json_path}")
+
+    def extract_font_from_layer(self, layer):
+        try:
+            # Attempt 1: Check engine_dict
+            engine_dict = layer.engine_dict
+            if engine_dict:
+                font_set = engine_dict.get('ResourceDict', {}).get('FontSet', [])
+                if font_set:
+                    return font_set[0].get('Name')
+
+            # Attempt 2: Check text_data
+            if hasattr(layer, 'text_data'):
+                font_info = layer.text_data.get('EngineDict', {}).get('Editor', {}).get('Text', {}).get('Font')
+                if font_info:
+                    return font_info.get('Name')
+
+            # Attempt 3: Check typography_options
+            if hasattr(layer, 'typography_options'):
+                font_name = layer.typography_options.get('font_name')
+                if font_name:
+                    return font_name
+
+            # Attempt 4: Check text object
+            if hasattr(layer, 'text') and hasattr(layer.text, 'font'):
+                return layer.text.font
+
+            # Attempt 5: Check additional attributes
+            if hasattr(layer, 'font'):
+                return layer.font
+
+            if hasattr(layer, 'fontset'):
+                return layer.fontset[0] if layer.fontset else None
+
+            # If all attempts fail, return None
+            return None
+        except Exception as e:
+            print(f"Error extracting font from layer '{layer.name}': {e}")
+            return None
 
     def ask_font_name(self, layer_name):
         from tkinter import simpledialog
