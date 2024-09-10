@@ -20,22 +20,23 @@ class PSDConverterApp:
         self.label = Label(self.drop_frame, text="Drag and drop a PSD file here or browse to select")
         self.label.place(relx=0.5, rely=0.5, anchor='center')
 
-        Label(root, text="PSD File (without extension):").grid(row=1, column=0, padx=10, pady=10)
+        Label(root, text="PSD File:").grid(row=1, column=0, padx=10, pady=10)
         self.psd_entry = Entry(root, width=30)
         self.psd_entry.grid(row=1, column=1, padx=10, pady=10)
 
-        Label(root, text="Output Folder Name:").grid(row=2, column=0, padx=10, pady=10)
+        Label(root, text="Output Folder:").grid(row=2, column=0, padx=10, pady=10)
         self.output_entry = Entry(root, width=30)
         self.output_entry.grid(row=2, column=1, padx=10, pady=10)
 
-        Button(root, text="Browse", command=self.browse_psd).grid(row=1, column=2, padx=10, pady=10)
+        Button(root, text="Browse PSD", command=self.browse_psd).grid(row=1, column=2, padx=10, pady=10)
+        Button(root, text="Browse Output", command=self.browse_output).grid(row=2, column=2, padx=10, pady=10)
         Button(root, text="Convert", command=self.convert).grid(row=3, column=0, columnspan=3, pady=10)
 
     def on_drop(self, event):
         file_path = event.data
         if file_path.endswith('.psd'):
             self.psd_entry.delete(0, 'end')
-            self.psd_entry.insert(0, os.path.splitext(os.path.basename(file_path))[0])
+            self.psd_entry.insert(0, file_path)
         else:
             messagebox.showerror("Error", "Please drop a valid PSD file.")
 
@@ -43,29 +44,35 @@ class PSDConverterApp:
         file_path = filedialog.askopenfilename(filetypes=[("PSD files", "*.psd")])
         if file_path:
             self.psd_entry.delete(0, 'end')
-            self.psd_entry.insert(0, os.path.splitext(os.path.basename(file_path))[0])
+            self.psd_entry.insert(0, file_path)
+
+    def browse_output(self):
+        folder_path = filedialog.askdirectory()
+        if folder_path:
+            self.output_entry.delete(0, 'end')
+            self.output_entry.insert(0, folder_path)
 
     def convert(self):
-        psd_filename = self.psd_entry.get().strip()
+        psd_path = self.psd_entry.get().strip()
         output_folder = self.output_entry.get().strip()
 
-        if not psd_filename or not output_folder:
-            messagebox.showerror("Error", "Please provide both PSD file name and output folder name.")
+        if not psd_path or not output_folder:
+            messagebox.showerror("Error", "Please provide both PSD file path and output folder path.")
             return
-
-        psd_path = f"./assets/{psd_filename}.psd"
-        output_path = f"./result/{output_folder}/"
-        json_path = os.path.join(output_path, f"{output_folder}.json")
-        skins_path = os.path.join(output_path, "skins/")
 
         if not os.path.exists(psd_path):
             messagebox.showerror("Error", f"The file {psd_path} does not exist.")
             return
 
+        output_folder_name = os.path.splitext(os.path.basename(psd_path))[0]
+        output_path = os.path.join(output_folder, output_folder_name)
+        json_path = os.path.join(output_path, f"{output_folder_name}.json")
+        skins_path = os.path.join(output_path, "skins/")
+
         if os.path.exists(output_path):
             save_in_existing = messagebox.askyesno("Folder Exists", f"The folder {output_path} already exists. Do you want to save into that folder anyway?")
             if not save_in_existing:
-                messagebox.showinfo("Operation Cancelled", "Please run the app again with a different name for the output folder.")
+                messagebox.showinfo("Operation Cancelled", "Please choose a different output folder or PSD file.")
                 return
 
         os.makedirs(skins_path, exist_ok=True)
